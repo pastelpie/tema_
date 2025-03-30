@@ -1,14 +1,13 @@
-# Executabil (implicit: a.out)
+# Executabil 
 EXEC = a.out
 
-# Compilator și opțiuni
 CC = gcc
 CFLAGS = -Wall
 
-# Fișier sursă
+# Sursa
 SRC = test.c
 
-# Comanda principală
+# Comanda 
 all:
 	make build run check 
 	clear
