@@ -51,12 +51,11 @@ int main(int argc,char *argv[])
     for(int i=0;i<N;i++)
       fscanf(fin,"%s",mi[i]);//citeste in stare initiala
 
-    // Scrie generația 0 în fișierul de output
     for (int i = 0; i < N; i++)
-    fprintf(fout, "%s\n", mi[i]);
+      fprintf(fout, "%s\n", mi[i]);
 
     if (K > 0)
-    fprintf(fout, "\n");
+      fprintf(fout, "\n");
 
     for(int k=0;k<K;k++)
     {
