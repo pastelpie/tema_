@@ -7,8 +7,9 @@ CFLAGS = -Wall
 # Sursa
 SRC = test.c
 
+
 # Comanda 
-all:
+all: 
 	make build run_t1 run_t2 check 
 	clear
 
@@ -30,6 +31,15 @@ run_t2:
 		rm -f "in/tmp$$i.in"; \
 	done'
 	
+run_t3:
+	bash -c 'for i in $$(seq 1 20); do \
+		cp "in/data$$i.in" "in/tmp$$i.in"; \
+		sed -i "1s/.*/3/" "in/tmp$$i.in"; \
+		echo "=== Rulăm Task 3 - testul $$i ==="; \
+		./$(EXEC) "in/tmp$$i.in" "out/t3-data$$i.out"; \
+		rm -f "in/tmp$$i.in"; \
+	done'
+
 check:
 	./checker -i
 
