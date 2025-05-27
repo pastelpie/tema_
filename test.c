@@ -20,15 +20,14 @@ struct Ntree
 {
   Node *modificari;
   struct Ntree *st, *dr;
-  char **matr;//matricea dupa aplicarea modificarilor
+  // char **matr;//matricea dupa aplicarea modificarilor
 };
 typedef struct Ntree tree;
 
-tree *nod_nou(Node *modif, char **matr)
+tree *nod_nou(Node *modif)
 {
   tree *aux = malloc(sizeof(tree));
   aux->modificari = modif;
-  aux->matr = matr;
   aux->st = NULL;
   aux->dr = NULL;
   return aux;
@@ -40,14 +39,14 @@ char **aloc_matr(int N, int M)
   for (int i = 0; i < N; i++)
   {
     m[i] = malloc((M + 1) * sizeof(char));
-    //m[i][M] = '\0';
+    // m[i][M] = '\0';
   }
   return m;
 }
 
 void freelist(Node *head) // elibereaza mem alocata pt lista
 {
-  
+
   while (head)
   {
     Node *aux = head;
@@ -56,7 +55,7 @@ void freelist(Node *head) // elibereaza mem alocata pt lista
   }
 }
 
-//add la finalul listei un nod cu coord x si y
+// add la finalul listei un nod cu coord x si y
 Node *add_modif(Node *head, int x, int y)
 {
   Node *nou = malloc(sizeof(Node));
@@ -73,7 +72,7 @@ Node *add_modif(Node *head, int x, int y)
   return head;
 }
 
-//add la finalul listei dublu inlantuite un nod complet
+// add la finalul listei dublu inlantuite un nod complet
 void add_sfarsit(Node **head, int x, int y, Data stare)
 {
   Node *nou = malloc(sizeof(Node));
@@ -108,7 +107,6 @@ int nrvecinivii(char **m, int N, int M, int x, int y)
   return ct;
 }
 
-
 // copiaza matr sursa(I) in destinatie(F)
 void copiazamatr(char **F, char **I, int N)
 {
@@ -123,27 +121,24 @@ void free_matr(char **m, int N)
   free(m);
 }
 
-void free_tree(tree *nod,int N)
+void free_tree(tree *nod)
 {
   if (!nod)
     return;
   freelist(nod->modificari);
-  free_matr(nod->matr,N);
-  free_tree(nod->st,N);
-  free_tree(nod->dr,N);
+  free_tree(nod->st);
+  free_tree(nod->dr);
   free(nod);
 }
 
-
-//aplica modif pe matr 
+// aplica modif pe matr
 void changes(char **m, Node *mod)
 {
   for (Node *p = mod; p; p = p->next)
     m[p->x][p->y] = p->stare;
 }
 
-
-//determina modif dintre o gen si urm dupa regula 
+// determina modif dintre o gen si urm dupa regula
 void calc_changes(char **m, int N, int M, int rule, Node **rez)
 {
   for (int i = 0; i < N; i++)
@@ -180,46 +175,69 @@ void calc_changes(char **m, int N, int M, int rule, Node **rez)
   }
 }
 
-
-//task3 arb de generatii
-void construieste_arbore(tree *nod, int N, int M, int adancime, int K)
+// task3 arb de generatii construit pana la adancimea K
+void construieste_arbore(tree *nod,char **matr, int N, int M, int adancime, int K)
 {
   if (adancime == K)
     return;
-  // regula B(fiul stang)
-  Node *fb = NULL;
-  calc_changes(nod->matr, N, M, 0, &fb);
+
+  
   char **auxb = aloc_matr(N, M);
-  copiazamatr(auxb, nod->matr, N);
+  copiazamatr(auxb,matr, N);
+  char **auxs = aloc_matr(N, M);
+  copiazamatr(auxs,matr, N);
+
+  // regula B(fiul stang)
+  Node *fb = NULL; // lista celule care isi schimba starea de la o gen la alta pt reg B
+  calc_changes(auxb, N, M, 0, &fb);
+  
   changes(auxb, fb);
-  nod->st = nod_nou(fb, auxb);
-  construieste_arbore(nod->st, N, M, adancime + 1, K);
+  nod->st = nod_nou(fb);
+  construieste_arbore(nod->st,auxb, N, M, adancime + 1, K);
+  free_matr(auxb,N);
 
   // regula standard(fiul drept)
-  Node *fs = NULL;
-  calc_changes(nod->matr, N, M, 1, &fs);
-  char **auxs = aloc_matr(N, M);
-  copiazamatr(auxs, nod->matr, N);
+  Node *fs = NULL; // lista celule care isi schimba starea de la o gen la alta pt reg standard
+  calc_changes(auxs, N, M, 1, &fs);
+  
   changes(auxs, fs);
-  nod->dr = nod_nou(fs, auxs);
-  construieste_arbore(nod->dr, N, M, adancime + 1, K);
+  nod->dr = nod_nou(fs);
+  construieste_arbore(nod->dr,auxs, N, M, adancime + 1, K);
+  free_matr(auxs,N);
+
+
 }
 
-
-//parcurge preordine si afis toate matr din arbore 
-void afisare_final(FILE *fout, tree *nod, int N)
+// parcurge preordine si afis toate matr din arbore
+void afisare_final(FILE *fout, tree *nod, char **matr, int N, int M)
 {
   if (!nod)
     return;
+
+  // copie a matr primite sa nu o stric
+  char **copie = aloc_matr(N, M);
+  copiazamatr(copie, matr, N);
+
+  changes(copie, nod->modificari);
+
   for (int i = 0; i < N; i++)
-    fprintf(fout, "%s\n", nod->matr[i]);
+    fprintf(fout, "%s\n", copie[i]);
   fprintf(fout, "\n");
-  afisare_final(fout, nod->st, N);
-  afisare_final(fout, nod->dr, N);
+
+  //merge recursiv pe subarbori
+  afisare_final(fout, nod->st, copie, N, M);
+
+  char **copie2 = aloc_matr(N, M);
+  copiazamatr(copie2, matr, N);
+  changes(copie2,nod->modificari);
+
+  afisare_final(fout, nod->dr, copie2, N, M);
+
+  free_matr(copie,N);
+  free_matr(copie2,N);
 }
 
-
-//bonus task2 pdf
+// bonus task2 pdf
 void t2bonus(FILE *fout, char **genk, Node **stiva, int K)
 {
   for (int i = K - 1; i >= 0; i--)
@@ -240,7 +258,7 @@ void t2bonus(FILE *fout, char **genk, Node **stiva, int K)
     fprintf(fout, "%s\n", genk[i]);
 }
 
-int main(int argc,const char *argv[])
+int main(int argc, const char *argv[])
 {
 
   FILE *fin = fopen(argv[1], "rt");
@@ -252,15 +270,15 @@ int main(int argc,const char *argv[])
   fscanf(fin, "%d %d", &N, &M);
   fscanf(fin, "%d", &K);
 
-  char **mi = aloc_matr(N, M); // matricea initiala
-  char **mf = aloc_matr(N, M); // matricea finala
-  char **matrinit = aloc_matr(N, M);//copie pt t3
+  char **mi = aloc_matr(N, M);       // matricea initiala
+  char **mf = aloc_matr(N, M);       // matricea finala
+  char **matrinit = aloc_matr(N, M); // copie pt t3
 
   for (int i = 0; i < N; i++)
     fscanf(fin, "%s", mi[i]); // citeste in stare initiala
 
   for (int i = 0; i < N; i++)
-    strcpy(matrinit[i], mi[i]);//copiaza starea initiala pt arbore
+    strcpy(matrinit[i], mi[i]); // copiaza starea initiala pt arbore
 
   if (task == 1)
   {
@@ -414,20 +432,20 @@ int main(int argc,const char *argv[])
   }
   else if (task == 3)
   {
-    Node *radmodif=NULL;
-    for(int i=0;i<N;i++)
-      for(int j=0;j<M;j++)
-        if(matrinit[i][j]=='X')
-          add_sfarsit(&radmodif,i,j,'X');
+    Node *rootmodif = NULL;
+    for (int i = 0; i < N; i++)
+      for (int j = 0; j < M; j++)
+        if (matrinit[i][j] == 'X')
+          add_sfarsit(&rootmodif, i, j, 'X');
 
-    char **radmatr=aloc_matr(N,M);
-    copiazamatr(radmatr,matrinit,N);
+    tree *root=nod_nou(rootmodif);
+    char **copie=aloc_matr(N,M);
+    copiazamatr(copie,matrinit,N);
 
-    tree *rad=nod_nou(radmodif,radmatr);
-    construieste_arbore(rad,N,M,0,K);
-    afisare_final(fout,rad,N);
-    free_tree(rad,N);
-
+    construieste_arbore(root,copie,N,M,0,K);
+    afisare_final(fout,root,copie,N,M);
+    free_tree(root);
+    free_matr(copie,N);
   }
 
   free_matr(mi, N);
